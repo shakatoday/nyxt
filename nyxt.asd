@@ -215,6 +215,7 @@ A naive benchmark on a 16 Mpbs bandwidth gives us
                 :components
                 ((:file "repl")
                  (:file "small-web")
+                 (:file "activitypub")
                  (:file "reading-line")
                  (:file "no-image")
                  (:file "no-sound")
