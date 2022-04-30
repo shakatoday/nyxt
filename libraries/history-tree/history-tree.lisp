@@ -547,6 +547,9 @@ If current node matches DATA (which may be non-identical since the
 `history-tree''s `key' and `test' functions may identify two non-identical datum
 as equal), do nothing.
 
+If there's a parent of current node that matches DATA, go `backward' to this
+node.
+
 If DATA is found among the children, OWNER-SPEC current node `forward-child' is
 set to the matching child, the owner current node is set to this child.
 
@@ -554,27 +557,31 @@ If there is no current node, this creates the `origin' node of OWNER-SPEC
 and also sets `current' to it.  If the owner has a `creator-id' set,
 the new node is added to the children of the current node of the creator."
   (let* ((owner (owner history owner-spec)))
-    (when owner
-      (cond
-        ((null (current owner))
-         (make-origin-node history (owner history owner-spec) data))
+    (flet ((matching-parent-position ()
+             (position data (node-contiguous-owned-parents owner (current owner))
+                       :key #'entry :test #'data-equal-entry-p)))
+      (when owner
+        (cond
+          ((null (current owner))
+           (make-origin-node history owner data))
+          ((matching-parent-position)
+           (backward history owner (1+ (matching-parent-position))))
+          ((not (data-equal-entry-p data (entry (current owner))))
+           (let ((node (find-child data owner)))
+             (unless node
+               (let ((maybe-new-entry (add-entry history data)))
+                 (push (setf node (make-node :entry maybe-new-entry
+                                             :parent (current owner)))
+                       (children (current owner)))))
+             (let ((binding (gethash owner (bindings (current owner)))))
+               (setf (forward-child binding) node))
+             (forward history owner)))
 
-        ((not (data-equal-entry-p data (entry (current owner))))
-         (let ((node (find-child data owner)))
-           (unless node
-             (let ((maybe-new-entry (add-entry history data)))
-               (push (setf node (make-node :entry maybe-new-entry
-                                           :parent (current owner)))
-                     (children (current owner)))))
-           (let ((binding (gethash owner (bindings (current owner)))))
-             (setf (forward-child binding) node))
-           (forward history owner)))
+          (t
+           ;; Current node matches data, do nothing.
+           nil))
 
-        (t
-         ;; Current node matches data, do nothing.
-         nil))
-
-      (current owner))))
+        (current owner)))))
 
 (export 'add-children)
 (defmethod add-children (children-data (history history-tree) owner-spec)
