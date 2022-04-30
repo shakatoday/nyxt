@@ -714,6 +714,10 @@ ELEMENT-SCRIPT is a Parenscript script that is passed to `ps:ps'."
                    :ratio (current-zoom-ratio (buffer mode)))
   url)
 
+(defmethod nyxt:on-signal-load-canceled ((mode web-mode) url)
+  (add-url-to-history url (buffer mode) mode)
+  url)
+
 ;; REVIEW: Shorten the name to e.g., `show-url-qr'? It's no longer current URL only.
 (define-internal-page-command-global show-qrcode-of-current-url
     (&key (buffer-id (id (current-buffer)))
